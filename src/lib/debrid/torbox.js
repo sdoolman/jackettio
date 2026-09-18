@@ -60,13 +60,7 @@ export default class Torbox {
     {
       type: 'password',
       name: 'torboxPassword',
-      label: 'Torbox Password',
-      required: false
-    },
-    {
-      type: 'password',
-      name: 'torboxRefreshToken',
-      label: 'Torbox Refresh Token',
+      label: 'Torbox Password (not needed after first install)',
       required: false
     }
   ];
