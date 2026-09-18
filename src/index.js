@@ -59,6 +59,36 @@ app.use((req, res, next) => {
 app.use(compression());
 app.use(express.static(path.join(import.meta.dirname, 'static'), {maxAge: 86400e3}));
 
+app.use(express.json());
+
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJlanhmeXRrbm5rb2VndHRldXpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjkxMjgzMzAsImV4cCI6MjA0NDcwNDMzMH0.vIQWcZuN6Nx3DnkmsWLK25J8BM3TTA_8Tb4GoK99MqM';
+
+app.post('/torbox/auth', async(req, res) => {
+  try {
+    const { email, password } = req.body || {};
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Torbox email and password are required.' });
+    }
+    const response = await fetch('https://db.torbox.app/auth/v1/token?grant_type=password', {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0'
+      },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await response.json();
+    if (!response.ok || !data.refresh_token) {
+      return res.status(400).json({ error: data.msg || data.error_description || 'Invalid Torbox email or password.' });
+    }
+    return res.json({ refreshToken: data.refresh_token });
+  } catch(err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+
 app.get('/', (req, res) => {
   res.redirect('/configure')
   res.end();

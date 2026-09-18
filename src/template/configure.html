@@ -249,6 +249,29 @@
                 userConfig[field.name] = field.value
               });
 
+              if (userConfig.debridId === 'torbox') {
+                if (!userConfig.torboxRefreshToken || userConfig.torboxPassword) {
+                  if (!userConfig.torboxPassword) {
+                    throw new Error('Torbox password is required to authenticate');
+                  }
+                  const authRes = await fetch('/torbox/auth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      email: userConfig.torboxEmail,
+                      password: userConfig.torboxPassword
+                    })
+                  });
+                  const authData = await authRes.json();
+                  if (!authRes.ok) {
+                    throw new Error(authData.error || 'Torbox authentication failed');
+                  }
+                  userConfig.torboxRefreshToken = authData.refreshToken;
+                }
+                delete userConfig.torboxPassword;
+              }
+
+
               if(!userConfig.debridId){
                 throw new Error(`Debrid is required`);
               }

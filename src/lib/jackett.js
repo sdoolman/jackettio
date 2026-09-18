@@ -18,8 +18,7 @@ export async function searchMovieTorrents({indexer, name, year}){
   if(!items){
     const res = await jackettApi(
       `/api/v2.0/indexers/${indexer}/results/torznab/api`,
-      // year is buggy with some indexers
-      {t: 'search', cat: CATEGORY.MOVIE, q: name /*, year: year*/}
+      {t: 'search', cat: CATEGORY.MOVIE, q: name}
     );
     items = res?.rss?.channel?.item || [];
     cache.set(cacheKey, items, {ttl: items.length > 0 ? 3600*36 : 60});
@@ -88,6 +87,38 @@ export async function searchEpisodeTorrents({indexer, name, year, season, episod
 
 export async function getIndexers(){
 
+  // 1. Try Prowlarr native indexer API
+  try {
+    const pRes = await fetch(`${config.jackettUrl}/api/v1/indexer`, {
+      headers: { 'X-Api-Key': config.jackettApiKey, 'Accept': 'application/json' }
+    });
+    if(pRes.ok){
+      const list = await pRes.json();
+      return list.filter(i => i.enable).map(i => {
+        const cats = (i.capabilities?.categories || []).map(c => c.id);
+        return {
+          id: i.id,
+          configured: true,
+          title: i.name,
+          language: 'en-US',
+          type: 'public',
+          categories: cats,
+          searching: {
+            movie: {
+              available: cats.some(c => c >= 2000 && c < 3000) || true,
+              supportedParams: ['q']
+            },
+            series: {
+              available: cats.some(c => c >= 5000 && c < 6000) || true,
+              supportedParams: ['q', 'season', 'ep']
+            }
+          }
+        };
+      });
+    }
+  }catch{}
+
+  // 2. Fallback to standard Jackett API
   const res = await jackettApi(
     '/api/v2.0/indexers/all/results/torznab/api',
     {t: 'indexers', configured: 'true'}
@@ -102,14 +133,26 @@ async function jackettApi(path, query){
   const params = new URLSearchParams(query || {});
   params.set('apikey', config.jackettApiKey);
 
-  const url = `${config.jackettUrl}${path}?${params.toString()}`;
+  // Map Jackett path to Prowlarr path if needed:
+  // /api/v2.0/indexers/${indexer}/results/torznab/api -> /${indexer}/api
+  let apiPath = path;
+  const torznabMatch = apiPath.match(/\/api\/v2\.0\/indexers\/([^\/]+)\/results\/torznab\/api/);
+  if(torznabMatch){
+    apiPath = `/${torznabMatch[1]}/api`;
+  }
+
+  const url = `${config.jackettUrl}${apiPath}?${params.toString()}`;
 
   let data;
-  const res = await fetch(url);
-  if(res.headers.get('content-type').includes('application/json')){
+  const res = await fetch(url, { headers: { 'X-Api-Key': config.jackettApiKey } });
+  const contentType = res.headers.get('content-type') || '';
+  if(contentType.includes('application/json')){
     data = await res.json();
   }else{
     const text = await res.text();
+    if(!text || res.status >= 400){
+      throw new Error(`jackettApi HTTP ${res.status}: ${text || 'Empty response'}`);
+    }
     const parser = new Parser({explicitArray: false, ignoreAttrs: false});
     data = await parser.parseStringPromise(text);
   }
@@ -125,8 +168,11 @@ async function jackettApi(path, query){
 function normalizeItems(items){
   return forceArray(items).map(item => {
     item = mergeDollarKeys(item);
-    const attr = item['torznab:attr'].reduce((obj, item) => {
-      obj[item.name] = item.value;
+    const rawAttr = item['torznab:attr'] || [];
+    const attr = forceArray(rawAttr).reduce((obj, item) => {
+      if(item && item.name){
+        obj[item.name] = item.value;
+      }
       return obj;
     }, {});
     const quality = item.title.match(/(2160|1080|720|480|360)p/);
@@ -135,9 +181,9 @@ function normalizeItems(items){
     return {
       name: item.title,
       guid: item.guid,
-      indexerId: item.jackettindexer.id,
-      id: crypto.createHash('sha1').update(item.guid).digest('hex'),
-      size: parseInt(item.size),
+      indexerId: item.jackettindexer?.id || item.prowlarrindexer?.id || item.prowlarrindexer?.$?.id || 0,
+      id: crypto.createHash('sha1').update(item.guid || item.title).digest('hex'),
+      size: parseInt(item.size || 0),
       link: item.link,
       seeders: parseInt(attr.seeders || 0),
       peers: parseInt(attr.peers || 0),
@@ -154,22 +200,22 @@ function normalizeItems(items){
 function normalizeIndexers(items){
   return forceArray(items).map(item => {
     item = mergeDollarKeys(item);
-    const searching = item.caps.searching;
+    const searching = item.caps?.searching || {};
     return {
       id: item.id,
       configured: item.configured == 'true',
       title: item.title,
       language: item.language,
       type: item.type,
-      categories: forceArray(item.caps.categories.category).map(category => parseInt(category.id)),
+      categories: forceArray(item.caps?.categories?.category || []).map(category => parseInt(category.id)),
       searching: {
         movie: {
-          available: searching['movie-search'].available == 'yes', 
-          supportedParams: searching['movie-search'].supportedParams.split(',')
+          available: searching['movie-search']?.available == 'yes', 
+          supportedParams: (searching['movie-search']?.supportedParams || '').split(',')
         },
         series: {
-          available: searching['tv-search'].available == 'yes', 
-          supportedParams: searching['tv-search'].supportedParams.split(',')
+          available: searching['tv-search']?.available == 'yes', 
+          supportedParams: (searching['tv-search']?.supportedParams || '').split(',')
         }
       }
     };

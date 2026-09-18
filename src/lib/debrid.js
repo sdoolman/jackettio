@@ -1,11 +1,12 @@
 import p2p from "./debrid/p2p.js";
+import torbox from "./debrid/torbox.js";
 import debridlink from "./debrid/debridlink.js";
 import alldebrid from "./debrid/alldebrid.js";
 import realdebrid from './debrid/realdebrid.js';
 import premiumize from './debrid/premiumize.js';
 export {ERROR} from './debrid/const.js';
 
-const debrid = {p2p, debridlink, alldebrid, realdebrid, premiumize};
+const debrid = {p2p, torbox, debridlink, alldebrid, realdebrid, premiumize};
 
 export function instance(userConfig){
 
