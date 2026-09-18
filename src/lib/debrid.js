@@ -1,5 +1,5 @@
 import p2p from "./debrid/p2p.js";
-import torbox from "./debrid/torbox.js";
+// torbox.js is kept as auth utility imported by torboxp2p.js
 import torboxp2p from "./debrid/torboxp2p.js";
 import debridlink from "./debrid/debridlink.js";
 import alldebrid from "./debrid/alldebrid.js";
@@ -7,7 +7,7 @@ import realdebrid from './debrid/realdebrid.js';
 import premiumize from './debrid/premiumize.js';
 export {ERROR} from './debrid/const.js';
 
-const debrid = {p2p, torbox, torboxp2p, debridlink, alldebrid, realdebrid, premiumize};
+const debrid = {p2p, torboxp2p, debridlink, alldebrid, realdebrid, premiumize};
 
 export function instance(userConfig){
 

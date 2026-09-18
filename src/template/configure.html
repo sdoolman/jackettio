@@ -249,7 +249,7 @@
                 userConfig[field.name] = field.value
               });
 
-              if (userConfig.debridId === 'torbox') {
+              if (userConfig.debridId === 'torboxp2p') {
                 if (!userConfig.torboxRefreshToken || userConfig.torboxPassword) {
                   if (!userConfig.torboxPassword) {
                     throw new Error('Torbox password is required to authenticate');
