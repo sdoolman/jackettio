@@ -379,7 +379,7 @@ export async function getStreams(userConfig, type, stremioId, publicUrl){
     if(torrent.progress && !torrent.isCached){
       rows.push(`⬇️ ${torrent.progress.percent}% ${bytesToSize(torrent.progress.speed)}/s`);
     }
-    if (userConfig.debridId === 'p2p') {
+    if (userConfig.debridId === 'p2p' || torrent.p2pFallback) {
       const fileIdx = file.index !== undefined ? file.index : 0;
       return {
         name: '[P2P] ' + config.addonName + ' ' + quality,
