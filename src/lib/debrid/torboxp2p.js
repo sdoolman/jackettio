@@ -12,8 +12,8 @@ const API_BASE = 'https://api.torbox.app/v1/api';
  */
 export default class TorboxP2P {
   static id = 'torboxp2p';
-  static name = 'Torbox + P2P Fallback';
-  static shortName = 'TB+P2P';
+  static name = 'P2P + Torbox Free Tier Boost';
+  static shortName = 'P2P+TB';
   static cacheCheckAvailable = true;
 
   static configFields = [

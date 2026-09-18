@@ -46,7 +46,7 @@ export async function getAccessTokenFromRefreshToken(refreshToken) {
 
 export default class Torbox {
   static id = 'torbox';
-  static name = 'Torbox (Web Auth)';
+  static name = 'Torbox Free Tier (Web Auth)';
   static shortName = 'TB';
   static cacheCheckAvailable = true;
 
